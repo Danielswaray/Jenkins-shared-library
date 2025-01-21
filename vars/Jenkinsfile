@@ -1,4 +1,4 @@
-@Library('Jenkins_shared_library') _
+@Library('Jenkins-shared-library') _
 def COLOR_MAP = [
     'FAILURE' : 'danger',
     'SUCCESS' : 'good'
@@ -15,7 +15,7 @@ pipeline{
         nodejs 'node16'
     }
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        SCANNER_HOME=tool 'sonar_scanner'
     }
     stages{
         stage('clean workspace'){
@@ -38,7 +38,7 @@ pipeline{
         when { expression { params.action == 'create'}}
             steps{
                 script{
-                    def credentialsId = 'Sonar-token'
+                    def credentialsId = 'Sonar_token'
                     qualityGate(credentialsId)
                 }
             }
