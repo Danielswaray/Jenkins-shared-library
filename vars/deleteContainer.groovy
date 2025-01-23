@@ -1,5 +1,5 @@
 def call() {
-    sh 'docker stop youtube1'
-    sh 'docker rm youtube1'
+    sh 'docker stop youtube'
+    sh 'docker rm youtube'
 
 }
