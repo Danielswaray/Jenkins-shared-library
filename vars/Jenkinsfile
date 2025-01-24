@@ -33,7 +33,7 @@ pipeline{
         stage("quality gate"){
            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Token'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'token'
                 }
             }
         }
