@@ -11,19 +11,18 @@ pipeline{
     environment {
         SCANNER_HOME=tool 'sonar_scanner'
     }
-    stages{
+    stages {
         stage('clean workspace'){
             steps{
-                cleanWorkspace()
+                cleanWs()
             }
         }
-        stage('checkout from Git'){
+        stage('Checkout from Git'){
             steps{
-                checkoutGit('https://github.com/Aj7Ay/Youtube-clone-app.git', 'main')
+                git branch: 'main', url: 'https://github.com/Aj7Ay/Youtube-clone-app.git'
             }
         }
-        stage('sonarqube Analysis'){
-        when { expression { params.action == 'create'}}
+        stage("Sonarqube Analysis "){
             steps{
                 withSonarQubeEnv('sonar_server') {
                     sh ''' $SCANNER_HOME/bin/sonar_scanner -Dsonar.projectName=youtube \
@@ -31,14 +30,16 @@ pipeline{
                 }
             }
         }
+        stage("quality gate"){
+           steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Token'
+                }
             }
         }
-            }
-        }
-        stage('Trivy file scan'){
-        when { expression { params.action == 'create'}}
-            steps{
-                trivyFs()
+        stage('Install Dependencies') {
+            steps {
+                sh "npm install"
             }
         }
         stage('OWASP FS SCAN') {
@@ -47,20 +48,14 @@ pipeline{
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
-        stage('Docker Build'){
-        when { expression { params.action == 'create'}}
-            steps{
-                script{
-                   def dockerHubUsername = params.DOCKER_HUB_USERNAME
-                   def imageName = params.IMAGE_NAME
-                   dockerBuild(dockerHubUsername, imageName)
-                }
+        stage('TRIVY FS SCAN') {
+            steps {
+                sh "trivy fs . > trivyfs.txt"
             }
         }
-        stage('Trivy iamge'){
-        when { expression { params.action == 'create'}}
+        stage("Docker Build & Push"){
             steps{
-                trivyImage()
+                script{
                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){
                        sh "docker build --build-arg REACT_APP_RAPID_API_KEY=f0ead79813ms -t youtube ."
                        sh "docker tag youtube Danielswaray/youtube:latest "
@@ -68,16 +63,18 @@ pipeline{
                     }
                 }
             }
-            }
         }
-        stage('Remove container'){
-        when { expression { params.action == 'delete'}}
+        stage("TRIVY"){
             steps{
-                removeContainer()
+                sh "trivy image Danielswaray/youtube:latest > trivyimage.txt"
             }
         }
-        stage('Kube deploy'){
-        when { expression { params.action == 'create'}}
+        stage('Deploy to container'){
+            steps{
+                sh 'docker run -d --name youtube1 -p 3000:3000 Danielswaray/youtube:latest'
+            }
+        }
+        stage('Deploy to kubernets'){
             steps{
                 script{
                     withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
@@ -91,7 +88,7 @@ pipeline{
     always {
         echo 'Slack Notifications'
         slackSend (
-            channel: '#channel name',   #change your channel name
+            channel: '#Jenkins',   #change your channel name
             color: COLOR_MAP[currentBuild.currentResult],
             message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} \n build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URL}"
         )
