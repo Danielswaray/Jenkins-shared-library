@@ -56,7 +56,7 @@ pipeline{
         stage("Docker Build & Push"){
             steps{
                 script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){
+                   withDockerRegistry(credentialsId: 'Danielswaray', toolName: 'docker'){
                        sh "docker build --build-arg REACT_APP_RAPID_API_KEY=f0ead79813ms -t youtube ."
                        sh "docker tag youtube Danielswaray/youtube:latest "
                        sh "docker push Danielswaray/youtube:latest "
